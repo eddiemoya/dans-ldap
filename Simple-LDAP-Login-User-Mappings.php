@@ -26,7 +26,7 @@ class LDAP_User_Mappings {
 	 * @var array
 	 * @access private
 	 */
-	private $_wp_user_meta_exclusions =   array('admin_color',
+	/*private $_wp_user_meta_exclusions =   array('admin_color',
 												'comment_shortcuts',
 												'dismissed_wp_pointers',
 												'rich_editing',
@@ -41,7 +41,9 @@ class LDAP_User_Mappings {
 												'first_name',
 												'last_name',
 												'description',
-												'nickname');
+												'nickname');*/
+	
+	
 	/**
 	 * Array of user ldap mappings
 	 * 
@@ -51,13 +53,15 @@ class LDAP_User_Mappings {
 	 */
 	public $ldap_mappings;
 	
+	private $_wp_user_meta_keys;
 	/**
 	 * Array of WP usermeta keys (with excluded meta keys removed)
 	 * 
 	 * @var array 
 	 * @access public
 	 */
-	public $wp_user_meta;
+	public $wp_user_meta = array('user_city',
+						 		 'user_state');
 	
 	/**
 	 * Array of WP user meta data
@@ -87,7 +91,7 @@ class LDAP_User_Mappings {
 	function __construct() {
 		
 		//Set $wp_user_meta, stripping out excluded keys
-		$this->get_wp_usermeta();
+		//$this->get_wp_usermeta();
 		
 		//Set $ldap_mappings
 		$this->get_ldap_mappings();
@@ -108,14 +112,24 @@ class LDAP_User_Mappings {
 		
 		if(! $this->ldap_mappings = get_option($this->_wp_mapping_option, false)) {
 			
+			
 			//ldap mapping option doesn't exist yet -- Create ldap mappings for each meta key with empty values
 			foreach($this->wp_user_meta as $key=>$obj) {
 				
-				$this->ldap_mappings[$obj->meta_key] = array('alt_dn' => '',
-															 'ldap_attr' => '');
+				$this->ldap_mappings[$obj] = array('alt_dn' => '',
+													 'ldap_attr' => '');
 			}
 			
-		} else {
+			/*echo '<pre>';
+			var_dump($this->ldap_mappings);
+			exit;*/
+		}
+		
+		/*echo '<pre>';
+		var_dump($this->ldap_mappings);
+		exit;*/
+			
+		/*} else {
 			
 			//Option exists, strip out exclusions
 			foreach($this->ldap_mappings as $metakey=>$attr) {
@@ -126,7 +140,7 @@ class LDAP_User_Mappings {
 				}
 			}
 			
-		}
+		}*/
 	}
 	
 	/**
@@ -142,11 +156,11 @@ class LDAP_User_Mappings {
 			
 			foreach($this->wp_user_meta as $key=>$obj) {
 				
-				$alt_dn = isset($post[self::ALT_DN_PREFIX . $obj->meta_key]) ? trim(strtolower($post[self::ALT_DN_PREFIX . $obj->meta_key])) : '';
-				$ldap_attr = isset($post[self::LDAP_ATTR_PREFIX . $obj->meta_key]) ? trim(strtolower($post[self::LDAP_ATTR_PREFIX . $obj->meta_key])) : '';
+				$alt_dn = isset($post[self::ALT_DN_PREFIX . $obj]) ? trim(strtolower($post[self::ALT_DN_PREFIX . $obj])) : '';
+				$ldap_attr = isset($post[self::LDAP_ATTR_PREFIX . $obj]) ? trim(strtolower($post[self::LDAP_ATTR_PREFIX . $obj])) : '';
 				
-				$this->ldap_mappings[$obj->meta_key] = array('alt_dn' => $alt_dn,
-															 'ldap_attr' => $ldap_attr);
+				$this->ldap_mappings[$obj] = array('alt_dn' => $alt_dn,
+													 'ldap_attr' => $ldap_attr);
 			} 
 		}
 		
@@ -217,11 +231,19 @@ class LDAP_User_Mappings {
 							//Make sure that we have a value for the filter
 							if($filter_value = $this->get_ldap_attr_value($filter)) {
 								
+								/*echo '<pre>';
+								var_dump($filter_value);
+								exit;*/
+								
 								//search ldap
 								$search_filter = $filter . '=' . $filter_value;
 								
 								$rs = ldap_search($ldap_conn, $dn, $search_filter);
 								$value = ldap_get_entries($ldap_conn, $rs);
+								
+								/*echo '<pre>';
+								var_dump($value);
+								exit;*/
 							
 								//Add result to $wp_userdata
 								$this->add_userdata($metakey, $value[0][$attrs['ldap_attr']][0]);
@@ -260,6 +282,17 @@ class LDAP_User_Mappings {
 		$this->wp_userdata[$metakey] = $value;
 	}
 	
+	public function add_user_meta($user_id) {
+		
+		foreach($this->wp_userdata as $key=>$value) {
+			
+			$meta_key = $key;
+			$meta_value = ucfirst(strtolower($value));
+			
+			update_user_meta($user_id, $meta_key, $meta_value);
+		}
+	}
+	
 	/**
 	 * Retrieves the value of ldap attribute from search results ($_ldap_attribute_values)
 	 * 
@@ -296,11 +329,13 @@ class LDAP_User_Mappings {
 		
 		global $wpdb;
 		
-		$sql = "SELECT DISTINCT meta_key FROM $wpdb->usermeta";
+		$meta_keys = implode(',', $this->_wp_user_meta_keys);
+		
+		$sql = "SELECT DISTINCT meta_key FROM $wpdb->usermeta WHERE meta_key IN ({$meta_keys})";
 		$this->wp_user_meta = $wpdb->get_results($sql);
 		
 		//Strip excluded user meta
-		array_walk($this->wp_user_meta, array($this, 'strip_exclusions'), &$this->wp_user_meta);
+		//array_walk($this->wp_user_meta, array($this, 'strip_exclusions'), &$this->wp_user_meta);
 	}
 	
 	/**

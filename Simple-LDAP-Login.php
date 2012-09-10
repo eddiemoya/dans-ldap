@@ -293,12 +293,21 @@ function sll_create_wp_user($username)
 					
 				//Set additional ldap attributes (if defined) to this user
 				$user_map->get_ldap_attributes($ldap, BASE_DN, $ldapuser);
-
+				
 				//Combine additional attrs with userdata array
-				$userData = $userData + $user_map->wp_userdata;
+				$userData = $userData;
 				
 				//Get ID of new user and create user
-				$result = wp_insert_user($userData);							
+				$result = wp_insert_user($userData);	
+				
+				//Add user meta fields for user
+				if(! is_wp_error($result)) {
+					
+					$user_map->add_user_meta($result);
+				
+				}
+
+				
 			}
 		break;
 	}
