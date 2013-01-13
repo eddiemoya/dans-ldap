@@ -81,6 +81,8 @@ add_filter('authenticate', 'sll_authenticate', 1, 3);
 
 //Authenticate function
 function sll_authenticate($user, $username, $password) {
+	global $ldap;
+	
 	if ( is_a($user, 'WP_User') ) { return $user; }
 	
 	//Failed, should we let it continue to lower priority authenticate methods?
@@ -169,6 +171,18 @@ function sll_authenticate($user, $username, $password) {
 				}
 				else
 				{
+					$result = ldap_search($ldap, BASE_DN, '(' . LOGIN . '=' . $username . ')');
+					$ldapuser = ldap_get_entries($ldap, $result);
+					
+					
+					//Include LDAP User Mappings class and create object
+					require_once( WP_PLUGIN_DIR."/simple-ldap-login/Simple-LDAP-Login-User-Mappings.php");
+					$user_map = new LDAP_User_Mappings;
+					//Set additional ldap attributes (if defined) to this user
+					$user_map->get_ldap_attributes($ldap, BASE_DN, $ldapuser);
+					
+					$user_map->add_user_meta($user->ID);
+					
 					//Otherwise, we're ready to return the user
 					return new WP_User($user->ID);
 				}
