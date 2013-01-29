@@ -199,6 +199,7 @@ class LDAP_User_Mappings {
 			
 			$this->_ldap_attribute_values = $base_ldap_results;
 			
+			
 			foreach($this->ldap_mappings as $metakey=>$attrs) {
 				
 				//if there is a value for this attr proceed
@@ -231,6 +232,7 @@ class LDAP_User_Mappings {
 							//Make sure that we have a value for the filter
 							if($filter_value = $this->get_ldap_attr_value($filter)) {
 								
+								
 								/*echo '<pre>';
 								var_dump($filter_value);
 								exit;*/
@@ -248,10 +250,10 @@ class LDAP_User_Mappings {
 								//Add result to $wp_userdata
 								$this->add_userdata($metakey, $value[0][$attrs['ldap_attr']][0]);
 									
-							} else {
+							} /*else {
 								
 								die('The filter attribute was not found');
-							}
+							}*/
 							
 						} else { //Use Base DN
 							
@@ -284,12 +286,14 @@ class LDAP_User_Mappings {
 	
 	public function add_user_meta($user_id) {
 		
-		foreach($this->wp_userdata as $key=>$value) {
-			
-			$meta_key = $key;
-			$meta_value = ucfirst(strtolower($value));
-			
-			update_user_meta($user_id, $meta_key, $meta_value);
+		if($this->wp_userdata) {
+			foreach($this->wp_userdata as $key=>$value) {
+				
+				$meta_key = $key;
+				$meta_value = ucfirst(strtolower($value));
+				
+				update_user_meta($user_id, $meta_key, $meta_value);
+			}
 		}
 	}
 	
